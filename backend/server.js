@@ -2,6 +2,7 @@ const express = require('express');
 require('dotenv').config();
 const mongoose = require('mongoose');
 const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 
 const app = express();
@@ -50,6 +51,35 @@ app.use('/api/v1/users', userRouter);
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/notes', notesRouter);
 app.use('/api/v1/debug', debugRouter);
+
+// Serve frontend web build static assets
+const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'web-build');
+app.use(express.static(frontendBuildPath));
+console.log('Frontend build path:', frontendBuildPath, 'index.html exists:', fs.existsSync(path.join(frontendBuildPath, 'index.html')));
+// At startup, list a few sample files in the build directory for easier debugging in CI (Heroku)
+try {
+    if (fs.existsSync(frontendBuildPath)) {
+        const files = fs.readdirSync(frontendBuildPath);
+        console.log('[Startup] frontend/web-build file count:', files.length);
+        console.log('[Startup] frontend/web-build samples:', files.slice(0, 10));
+    } else {
+        console.log('[Startup] frontend/web-build not found. Did the build run?');
+    }
+} catch (e) {
+    console.log('[Startup] error inspecting frontend build folder:', e && e.message);
+}
+
+// Debug: print file existence for incoming requests before static handling
+app.use((req, res, next) => {
+    try {
+        const mapped = path.join(frontendBuildPath, req.path === '/' ? 'index.html' : req.path);
+        console.log('[Static debug] Request:', req.method, req.path, '->', mapped, 'exists:', fs.existsSync(mapped));
+    } catch (e) {
+        console.log('[Static debug] Error checking path', e && e.message);
+    }
+    next();
+});
+
 
 // Simple ping for debug route sanity check
 app.get('/api/v1/debug/ping', (req, res) => res.json({ ok: true }));
@@ -108,11 +138,33 @@ app.use((req, res, next) => {
     }
 });
 
-// General 404 handler for non-API routes
+// General 404 handler for non-API routes will fall back to serving index.html for SPA.
+// We rely on express.static(frontendBuildPath) above to serve existing assets, but add
+// a middleware that explicitly serves files when the request has a file extension.
+app.use((req, res, next) => {
+    try {
+        const ext = path.extname(req.path);
+        if (ext) {
+            const assetPath = path.join(frontendBuildPath, req.path);
+            if (fs.existsSync(assetPath)) {
+                console.log('[Static] serving asset for', req.path);
+                return res.sendFile(assetPath);
+            }
+        }
+    } catch (e) {
+        // ignore any errors and fallback to next
+    }
+    return next();
+});
+
 app.use((req, res) => {
     console.log('General 404 handler hit:', req.method, req.path);
     if (!req.path.startsWith('/api/')) {
-        res.status(404).json({ 
+        const indexPath = path.join(frontendBuildPath, 'index.html');
+        if (fs.existsSync(indexPath)) {
+            return res.sendFile(indexPath);
+        }
+        return res.status(404).json({ 
             error: 'Route not found', 
             method: req.method, 
             path: req.path 
