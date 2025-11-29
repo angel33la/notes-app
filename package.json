@@ -1,7 +1,7 @@
 {
   "name": "mobile-app-native",
   "version": "1.0.0",
-  "description": "",
+  "description": "React Native MongoDB Express NodeJS Notes App",
   "homepage": "https://github.com/angel33la/notes-app#readme",
   "bugs": {
     "url": "https://github.com/angel33la/notes-app/issues"
@@ -19,15 +19,15 @@
   },
   "scripts": {
     "install-reactjs": "npm install --prefix frontend/mobile-app-native --include=dev",
-    "install-api": "npm install --prefix server",
+    "install-api": "npm install --prefix backend/mobile-app-native --include=dev",
     "build-reactjs": "npm run build --prefix frontend/mobile-app-native",
     "heroku-postbuild": "npm run install-reactjs && npm run install-api && npm run build-reactjs",
     "start": "npm start --prefix server",
     "dev:react": "concurrently --raw \"npm run api\" \"npm run react\"",
     "react": "cd frontend/mobile-app-native && npm run start",
-    "api": "cd backend; nodemon server.js",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "api": "cd backend/mobile-app-native; nodemon server.js",
+    "predeploy": "npm run build-reactjs",
+    "deploy": "gh-pages -d build-reactjs"
   },
   "dependencies": {
     "array-union": "^2.1.0",
