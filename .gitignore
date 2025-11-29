@@ -1,4 +1,20 @@
-# Logs
+node_modules/
+dist/
+build/
+.expo/
+.vscode/
+.DS_Store
+/tmp
+env*
+*.log
+coverage/
+npm-debug.log*
+package-lock.json
+yarn.lock
+web-build/
+android/
+ios/
+/*.env# Logs
 logs
 *.log
 npm-debug.log*
